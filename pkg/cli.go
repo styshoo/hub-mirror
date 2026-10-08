@@ -68,17 +68,20 @@ func (c *Cli) Source2Target(source string, platform string) (*Output, error) {
 		return nil, errors.New("source is nil")
 	}
 
-	target := source
-
+	target := ""
 	if strings.Contains(source, "$") {
-		parts := strings.Split(source, "$")
+		parts := strings.SplitN(source, "$", 2)
 		source = parts[0]
 		target = parts[1]
 	}
 
-	if !strings.Contains(target, ":") && strings.Contains(source, ":") {
-		parts := strings.Split(source, ":")
-		target += ":" + parts[1]
+	// Pull keeps the digest pin. The mirror tag must not, because Docker
+	// refuses to create a tag whose reference contains @sha256.
+	name, tag, digest := splitNameTagDigest(source)
+	if target == "" {
+		target = joinNameAndTag(name, tag, digest)
+	} else if !strings.Contains(target, ":") {
+		target = joinNameAndTag(target, tag, digest)
 	}
 
 	if platform != "" {
@@ -201,4 +204,34 @@ func (c *Cli) PushImage(ctx context.Context, image, platform string) error {
 	}
 
 	return nil
+}
+
+// splitNameTagDigest splits "name[:tag][@algo:hex]". The first colon separates
+// the tag, matching the historical mirror naming. A registry port is not supported.
+func splitNameTagDigest(ref string) (name, tag, digest string) {
+	if i := strings.LastIndex(ref, "@"); i >= 0 {
+		digest = ref[i+1:]
+		ref = ref[:i]
+	}
+	if i := strings.Index(ref, ":"); i >= 0 {
+		return ref[:i], ref[i+1:], digest
+	}
+	return ref, "", digest
+}
+
+func joinNameAndTag(name, tag, digest string) string {
+	if tag != "" {
+		return name + ":" + tag
+	}
+	if hex := digestHex(digest); hex != "" {
+		return name + ":" + hex
+	}
+	return name
+}
+
+func digestHex(digest string) string {
+	if i := strings.Index(digest, ":"); i >= 0 {
+		return digest[i+1:]
+	}
+	return digest
 }

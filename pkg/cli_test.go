@@ -86,4 +86,16 @@ func TestSource2Target(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "registry.k8s.io/kube-apiserver:v1.27.4", output.Source)
 	assert.Equal(t, "docker.io/togettoyou/registry.k8s.io.kube-apiserver-arm64:v1.27.4", output.Target)
+
+	source = "public.ecr.aws/docker/library/golang:1.27.1-trixie@sha256:433790e515d27dc6003e847e644cc0af956985cf315c1c58a3b73ee2dd305183"
+	output, err = cli.Source2Target(source, "")
+	assert.Nil(t, err)
+	assert.Equal(t, source, output.Source)
+	assert.Equal(t, "docker.io/togettoyou/public.ecr.aws.docker.library.golang:1.27.1-trixie", output.Target)
+
+	source = "public.ecr.aws/docker/library/golang:1.27.1-trixie@sha256:433790e515d27dc6003e847e644cc0af956985cf315c1c58a3b73ee2dd305183$golang:1.27.1-trixie"
+	output, err = cli.Source2Target(source, "")
+	assert.Nil(t, err)
+	assert.Equal(t, "public.ecr.aws/docker/library/golang:1.27.1-trixie@sha256:433790e515d27dc6003e847e644cc0af956985cf315c1c58a3b73ee2dd305183", output.Source)
+	assert.Equal(t, "docker.io/togettoyou/golang:1.27.1-trixie", output.Target)
 }
